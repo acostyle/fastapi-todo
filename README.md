@@ -1,101 +1,96 @@
 # Task Tracker API (FastAPI)
 
-Небольшой REST API для задач и пользователей. Асинхронный FastAPI + SQLAlchemy,
-JWT-авторизация, миграции Alembic. Основная среда запуска - PostgreSQL в Docker.
+Простое API для задач и пользователей: FastAPI + SQLAlchemy + JWT + Redis + Alembic.
 
-## Возможности
+## Запуск через Docker
 
-- регистрация и логин пользователей (JWT)
-- CRUD задач
-- статистика по задачам (общая, по дням, активные пользователи)
-- асинхронная БД, миграции Alembic
-- кэширование списка задач в Redis с инвалидацией при create/update/delete
-- линтинг и форматирование через Ruff
-
-## Быстрый старт (Docker + PostgreSQL)
-
-1. Скопируй `.env`:
+1. Подготовь env:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Задай `SECURITY__SECRET_KEY` длиной минимум 32 символа.
+2. Открой `.env` и задай `SECURITY__SECRET_KEY` (минимум 32 символа).
 
-3. Запусти контейнеры:
+3. Запусти проект:
 
 ```bash
-docker compose up --build
+make up
 ```
 
-Приложение стартует с `alembic upgrade head`, после этого запускается Gunicorn.
-Swagger-документация: `http://localhost:8000/docs`
+4. Открой Swagger:
+
+`http://localhost:8000/docs`
+
+Это все. База и Redis поднимутся автоматически, миграции применятся при старте app.
+
+## Остановка и сброс
+
+Остановить контейнеры:
+
+```bash
+make down
+```
+
+Остановить и удалить данные БД/Redis:
+
+```bash
+make down-v
+```
 
 ## Локальный запуск (без Docker)
 
-1. Нужен Python 3.13+
-2. Установи зависимости через `uv`:
+Требования:
+- Python 3.13+
+- `uv`
+- PostgreSQL и Redis (или скорректируй `.env` под свой запуск)
+
+Команды:
 
 ```bash
-uv sync
+make local-setup
+make run
 ```
 
-3. Примени миграции:
+Swagger:
+`http://localhost:8000/docs`
 
-```bash
-uv run alembic upgrade head
-```
+## Что внутри
 
-4. Запусти сервер:
+- регистрация и логин пользователей (JWT)
+- CRUD задач
+- статистика задач (`stats_total`, `stats_by_day`, `active_users`)
+- кэш списка задач в Redis
 
-```bash
-uv run uvicorn src.main:app --reload
-```
-
-Для production-запуска с Gunicorn и несколькими воркерами:
-
-```bash
-GUNICORN_WORKERS=4 uv run gunicorn -c gunicorn.conf.py src.main:app
-```
-
-## Конфигурация
+## Основные настройки (`.env`)
 
 Обязательное:
+- `SECURITY__SECRET_KEY`
 
-- `SECURITY__SECRET_KEY` — секрет для JWT (>= 32 символов)
+## Частые проблемы
 
-Часто используемые:
+`SECURITY__SECRET_KEY must be at least 32 characters`:
+- задай более длинный ключ в `.env`.
 
-- `APP__NAME`, `APP__DEBUG`, `APP__ENVIRONMENT`
-- `APP_PORT` — внешний порт приложения в docker compose
-- `DATABASE__URL` — URL БД (по умолчанию указывает на PostgreSQL в docker compose)
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — параметры контейнера Postgres
-- `REDIS__URL` — URL Redis для кэша списка задач
-- `REDIS__TASK_LIST_TTL_SECONDS` — TTL кэша списка задач в секундах
-- `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `GUNICORN_LOG_LEVEL`
-- `DATABASE__DRIVER`, `DATABASE__PATH`, `DATABASE__NAME`, `DATABASE__ECHO`
+Порт 8000 занят:
+- поменяй `APP_PORT` в `.env`.
 
-Пример значений смотри в `.env.example`.
+Не получается тестировать через curl/Postman:
+- в проекте включена блокировка некоторых User-Agent.
+- используй Swagger UI в браузере (`/docs`) или другой клиент.
 
-## API
-
-Базовый префикс: `/api/v1`
-
-Группы:
-
-- `/users` — регистрация, логин (`POST /api/v1/users/login`), получение пользователя по id
-- `/tasks` — список, получить по id, создать, обновить, удалить
-- статистика задач: `stats_total`, `stats_by_day`, `active_users` (см. Swagger)
-
-## Тесты
+## Тесты и линтинг
 
 ```bash
-pytest
+make test
+make lint
 ```
 
-## Линтинг и форматирование
+## Полезные make-команды
 
 ```bash
-ruff check .
-ruff format .
+make help
+make up-d
+make logs
+make ps
 ```
