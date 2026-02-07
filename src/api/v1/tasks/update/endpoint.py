@@ -7,6 +7,7 @@ from src.api.v1.tasks.dependencies import get_task_service
 from src.api.v1.tasks.update.request import UpdateTaskRequest
 from src.api.v1.tasks.update.response import UpdateTaskResponse
 from src.auth import get_current_user_id
+from src.tasks.dto import TaskUpdateDTO
 from src.tasks.services import TaskService
 
 
@@ -16,31 +17,14 @@ async def update_task(
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(get_current_user_id),
 ) -> UpdateTaskResponse:
-    """
-    Обновить задачу.
-
-    Поддерживает частичное обновление - можно обновить только некоторые поля.
-    Не переданные поля остаются без изменений.
-    Чтобы очистить description, передайте null.
-
-    Args:
-        task_id: UUID задачи
-        task_data: Данные для обновления
-        service: Сервис для работы с задачами
-        user_id: ID текущего пользователя из JWT токена
-
-    Returns:
-        Обновленная задача
-
-    Raises:
-        HTTPException 401: Если токен невалидный
-        HTTPException 404: Если задача не найдена
-        HTTPException 400: Если данные невалидны
-    """
-    task = await service.update_task(
-        task_id=task_id, task_data=task_data, user_id=user_id
+    update_dict = task_data.model_dump(exclude_unset=True)
+    task_dto = TaskUpdateDTO(
+        title=update_dict.get("title", ...),
+        description=update_dict.get("description", ...),
+        is_done=update_dict.get("is_done", ...),
     )
-    return task
+    task = await service.update_task(task_id=task_id, task_data=task_dto, user_id=user_id)
+    return UpdateTaskResponse.model_validate(task)
 
 
 ENDPOINT_CONFIG = {

@@ -1,85 +1,74 @@
 from uuid import UUID
 
-from src.api.v1.tasks.create.request import CreateTaskRequest as TaskCreateSchema
-from src.api.v1.tasks.create.response import CreateTaskResponse
-from src.api.v1.tasks.get_by_id.response import TaskDetailResponse
-from src.api.v1.tasks.get_list.request import GetTaskListRequest
-from src.api.v1.tasks.get_list.response import TaskResponse
-from src.api.v1.tasks.update.request import UpdateTaskRequest as TaskUpdateSchema
-from src.api.v1.tasks.update.response import UpdateTaskResponse
-from src.api.v1.tasks.stats_total.response import TaskStatsResponse
-from src.api.v1.tasks.stats_by_day.response import TasksByDayResponse
-from src.api.v1.tasks.active_users.response import ActiveUserResponse
-from src.tasks.models import Task
-from src.tasks.dto import TaskCreateDTO, TaskUpdateDTO, TaskFilterDTO
+from src.tasks.cache import TaskListCacheBackend
+from src.tasks.dto import (
+    ActiveUserDTO,
+    TaskCreateDTO,
+    TaskFilterDTO,
+    TaskReadDTO,
+    TaskStatsDTO,
+    TasksByDayDTO,
+    TaskUpdateDTO,
+)
 from src.tasks.exceptions import TaskNotFoundError
+from src.tasks.models import Task
 from src.tasks.repository import TaskRepository
 
 
 class TaskService:
-    def __init__(self, repository: TaskRepository):
+    def __init__(
+        self,
+        repository: TaskRepository,
+        task_list_cache: TaskListCacheBackend,
+    ):
         self.repository = repository
+        self.task_list_cache = task_list_cache
 
-    async def create_task(
-        self, task_data: TaskCreateSchema, user_id: UUID
-    ) -> CreateTaskResponse:
-        task_dto = TaskCreateDTO(
-            title=task_data.title,
-            description=task_data.description,
-            user_id=user_id,
-        )
+    async def create_task(self, task_data: TaskCreateDTO) -> TaskReadDTO:
+        task_model = await self.repository.create(task_data)
+        await self.task_list_cache.invalidate_user(task_data.user_id)
+        return self._to_task_read_dto(task_model)
 
-        task_model = await self.repository.create(task_dto)
-        return CreateTaskResponse.model_validate(task_model)
-
-    async def get_task_by_id(self, task_id: UUID, user_id: UUID) -> TaskDetailResponse:
+    async def get_task_by_id(self, task_id: UUID, user_id: UUID) -> TaskReadDTO:
         task = await self._get_task_or_raise(task_id=task_id, user_id=user_id)
-        return TaskDetailResponse.model_validate(task)
+        return self._to_task_read_dto(task)
 
-    async def get_all_tasks(
-        self, search_params: GetTaskListRequest, user_id: UUID
-    ) -> list[TaskResponse]:
-        filter_dto = TaskFilterDTO(
-            user_id=user_id,
-            is_done=search_params.is_done,
-            created_from=search_params.created_from,
-            created_to=search_params.created_to,
-            query=search_params.query,
-            order_by=search_params.order_by,
-            direction=search_params.direction,
-            limit=search_params.limit,
-            offset=search_params.offset,
+    async def get_all_tasks(self, search_params: TaskFilterDTO) -> list[TaskReadDTO]:
+        cached_tasks = await self.task_list_cache.get_tasks(
+            user_id=search_params.user_id, search_params=search_params
         )
+        if cached_tasks is not None:
+            return cached_tasks
 
-        tasks = await self.repository.get_filtered_tasks(filter_dto)
-        return [TaskResponse.model_validate(task) for task in tasks]
+        tasks = await self.repository.get_filtered_tasks(search_params)
+        task_responses = [self._to_task_read_dto(task) for task in tasks]
+        await self.task_list_cache.set_tasks(
+            user_id=search_params.user_id,
+            search_params=search_params,
+            tasks=task_responses,
+        )
+        return task_responses
 
     async def update_task(
-        self, task_id: UUID, task_data: TaskUpdateSchema, user_id: UUID
-    ) -> UpdateTaskResponse:
+        self, task_id: UUID, task_data: TaskUpdateDTO, user_id: UUID
+    ) -> TaskReadDTO:
         task = await self._get_task_or_raise(task_id=task_id, user_id=user_id)
 
-        update_dict = task_data.model_dump(exclude_unset=True)
-
-        task_dto = TaskUpdateDTO(
-            title=update_dict.get("title", ...),
-            description=update_dict.get("description", ...),
-            is_done=update_dict.get("is_done", ...),
-        )
-
-        if task_dto.title is not ...:
-            task.title = task_dto.title
-        if task_dto.description is not ...:
-            task.description = task_dto.description
-        if task_dto.is_done is not ...:
-            task.is_done = task_dto.is_done
+        if task_data.title is not ...:
+            task.title = task_data.title
+        if task_data.description is not ...:
+            task.description = task_data.description
+        if task_data.is_done is not ...:
+            task.is_done = task_data.is_done
 
         updated_task = await self.repository.save(task)
-        return UpdateTaskResponse.model_validate(updated_task)
+        await self.task_list_cache.invalidate_user(user_id)
+        return self._to_task_read_dto(updated_task)
 
     async def delete_task(self, task_id: UUID, user_id: UUID) -> None:
         task = await self._get_task_or_raise(task_id=task_id, user_id=user_id)
         await self.repository.delete(task_id=task.id)
+        await self.task_list_cache.invalidate_user(user_id)
 
     async def _get_task_or_raise(self, task_id: UUID, user_id: UUID) -> Task:
         task = await self.repository.get_by_id_and_user(
@@ -92,34 +81,42 @@ class TaskService:
 
         return task
 
-    async def get_task_stats(self, user_id: UUID) -> TaskStatsResponse:
+    async def get_task_stats(self, user_id: UUID) -> TaskStatsDTO:
         stats = await self.repository.get_task_stats(user_id)
 
         completion_percentage = (
             (stats["completed"] / stats["total"] * 100) if stats["total"] > 0 else 0.0
         )
 
-        return TaskStatsResponse(
+        return TaskStatsDTO(
             total=stats["total"],
             completed=stats["completed"],
             pending=stats["pending"],
             completion_percentage=round(completion_percentage, 2),
         )
 
-    async def get_tasks_by_day(self, user_id: UUID) -> list[TasksByDayResponse]:
+    async def get_tasks_by_day(self, user_id: UUID) -> list[TasksByDayDTO]:
         tasks_by_day = await self.repository.get_tasks_by_day(user_id)
-        return [
-            TasksByDayResponse(date=item["date"], count=item["count"])
-            for item in tasks_by_day
-        ]
+        return [TasksByDayDTO(date=item["date"], count=item["count"]) for item in tasks_by_day]
 
-    async def get_active_users(self, limit: int = 10) -> list[ActiveUserResponse]:
+    async def get_active_users(self, limit: int = 10) -> list[ActiveUserDTO]:
         active_users = await self.repository.get_active_users(limit)
         return [
-            ActiveUserResponse(
+            ActiveUserDTO(
                 user_id=item["user_id"],
                 username=item["username"],
                 pending_tasks_count=item["pending_tasks_count"],
             )
             for item in active_users
         ]
+
+    @staticmethod
+    def _to_task_read_dto(task: Task) -> TaskReadDTO:
+        return TaskReadDTO(
+            id=task.id,
+            title=task.title,
+            description=task.description,
+            is_done=task.is_done,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+        )

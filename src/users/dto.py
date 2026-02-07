@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
+from uuid import UUID
 
 
 @dataclass
@@ -24,3 +25,15 @@ class UserUpdateDTO:
 class UserPasswordChangeDTO:
     current_password: str
     new_password: str
+
+
+@dataclass
+class UserReadDTO:
+    id: UUID
+    username: str
+    email: str
+    first_name: str | None
+    last_name: str | None
+    birthdate: date | None
+    created_at: datetime
+    updated_at: datetime

@@ -4,6 +4,7 @@ from starlette import status
 from src.api.v1.users.dependencies import get_user_service
 from src.api.v1.users.register.request import RegisterRequest
 from src.api.v1.users.register.response import RegisterResponse
+from src.users.dto import UserCreateDTO
 from src.users.services import UserService
 
 
@@ -11,8 +12,16 @@ async def register_user(
     user_data: RegisterRequest,
     service: UserService = Depends(get_user_service),
 ) -> RegisterResponse:
-    result = await service.create_user(user_data)
-    return result
+    user_dto = UserCreateDTO(
+        username=user_data.username,
+        email=str(user_data.email),
+        password=user_data.password,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        birthdate=user_data.birthdate,
+    )
+    result = await service.create_user(user_dto)
+    return RegisterResponse.model_validate(result)
 
 
 ENDPOINT_CONFIG = {

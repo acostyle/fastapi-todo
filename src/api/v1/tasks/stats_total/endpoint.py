@@ -13,20 +13,8 @@ async def get_task_stats(
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(get_current_user_id),
 ) -> TaskStatsResponse:
-    """
-    Получить статистику по задачам текущего пользователя.
-
-    Args:
-        service: Сервис для работы с задачами
-        user_id: ID текущего пользователя из JWT токена
-
-    Returns:
-        Статистика: всего задач, выполнено, невыполнено, процент завершения
-
-    Raises:
-        HTTPException 401: Если токен невалидный или отсутствует
-    """
-    return await service.get_task_stats(user_id=user_id)
+    stats = await service.get_task_stats(user_id=user_id)
+    return TaskStatsResponse.model_validate(stats)
 
 
 ENDPOINT_CONFIG = {

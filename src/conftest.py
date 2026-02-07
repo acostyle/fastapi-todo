@@ -10,15 +10,12 @@ from fastapi.testclient import TestClient
 _TEST_DB_DIR = Path(tempfile.mkdtemp(prefix="fastapi_test_db_"))
 _TEST_DB_PATH = _TEST_DB_DIR / "test.db"
 
-os.environ.setdefault("APP__ENVIRONMENT", "testing")
-os.environ.setdefault("DATABASE__URL", f"sqlite+aiosqlite:///{_TEST_DB_PATH}")
-os.environ.setdefault(
-    "SECURITY__SECRET_KEY",
-    "test-secret-key-please-change-1234567890abcdef",
-)
+os.environ["APP__ENVIRONMENT"] = "testing"
+os.environ["DATABASE__URL"] = f"sqlite+aiosqlite:///{_TEST_DB_PATH}"
+os.environ["SECURITY__SECRET_KEY"] = "test-secret-key-please-change-1234567890abcdef"
 
 from src.database import Base, async_session_maker, engine, get_session  # noqa: E402
-from src.main import app
+from src.main import app  # noqa: E402
 
 
 def _run_async(coro):

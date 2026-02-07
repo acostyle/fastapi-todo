@@ -12,7 +12,8 @@ async def get_user_by_id(
     user_id: UUID,
     service: UserService = Depends(get_user_service),
 ) -> GetUserResponse:
-    return await service.get_user(user_id=user_id)
+    user = await service.get_user(user_id=user_id)
+    return GetUserResponse.model_validate(user)
 
 
 ENDPOINT_CONFIG = {

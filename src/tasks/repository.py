@@ -119,7 +119,7 @@ class TaskRepository:
                 func.count(Task.id).label("pending_tasks_count"),
             )
             .join(Task, Task.user_id == User.id)
-            .where(Task.is_done == False)
+            .where(Task.is_done.is_(False))
             .group_by(User.id, User.username)
             .order_by(func.count(Task.id).desc())
             .limit(limit)

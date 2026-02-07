@@ -1,7 +1,7 @@
 # Task Tracker API (FastAPI)
 
 Небольшой REST API для задач и пользователей. Асинхронный FastAPI + SQLAlchemy,
-JWT-авторизация, миграции Alembic. По умолчанию используется SQLite.
+JWT-авторизация, миграции Alembic. Основная среда запуска - PostgreSQL в Docker.
 
 ## Возможности
 
@@ -9,37 +9,54 @@ JWT-авторизация, миграции Alembic. По умолчанию и
 - CRUD задач
 - статистика по задачам (общая, по дням, активные пользователи)
 - асинхронная БД, миграции Alembic
+- кэширование списка задач в Redis с инвалидацией при create/update/delete
+- линтинг и форматирование через Ruff
 
-## Быстрый старт (SQLite)
+## Быстрый старт (Docker + PostgreSQL)
 
-1. Нужен Python 3.13+
-2. Скопируй и настрой `.env`:
+1. Скопируй `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-Задай `SECURITY__SECRET_KEY` длиной минимум 32 символа.
+2. Задай `SECURITY__SECRET_KEY` длиной минимум 32 символа.
 
-3. Установи зависимости через `uv`:
+3. Запусти контейнеры:
+
+```bash
+docker compose up --build
+```
+
+Приложение стартует с `alembic upgrade head`, после этого запускается Gunicorn.
+Swagger-документация: `http://localhost:8000/docs`
+
+## Локальный запуск (без Docker)
+
+1. Нужен Python 3.13+
+2. Установи зависимости через `uv`:
 
 ```bash
 uv sync
 ```
 
-4. Примени миграции:
+3. Примени миграции:
 
 ```bash
 uv run alembic upgrade head
 ```
 
-5. Запусти сервер:
+4. Запусти сервер:
 
 ```bash
 uv run uvicorn src.main:app --reload
 ```
 
-Swagger-документация: `http://localhost:8000/docs`
+Для production-запуска с Gunicorn и несколькими воркерами:
+
+```bash
+GUNICORN_WORKERS=4 uv run gunicorn -c gunicorn.conf.py src.main:app
+```
 
 ## Конфигурация
 
@@ -50,7 +67,12 @@ Swagger-документация: `http://localhost:8000/docs`
 Часто используемые:
 
 - `APP__NAME`, `APP__DEBUG`, `APP__ENVIRONMENT`
-- `DATABASE__URL` — если указано, используется вместо SQLite
+- `APP_PORT` — внешний порт приложения в docker compose
+- `DATABASE__URL` — URL БД (по умолчанию указывает на PostgreSQL в docker compose)
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — параметры контейнера Postgres
+- `REDIS__URL` — URL Redis для кэша списка задач
+- `REDIS__TASK_LIST_TTL_SECONDS` — TTL кэша списка задач в секундах
+- `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `GUNICORN_LOG_LEVEL`
 - `DATABASE__DRIVER`, `DATABASE__PATH`, `DATABASE__NAME`, `DATABASE__ECHO`
 
 Пример значений смотри в `.env.example`.
@@ -61,7 +83,7 @@ Swagger-документация: `http://localhost:8000/docs`
 
 Группы:
 
-- `/users` — регистрация, логин, получение пользователя по id
+- `/users` — регистрация, логин (`POST /api/v1/users/login`), получение пользователя по id
 - `/tasks` — список, получить по id, создать, обновить, удалить
 - статистика задач: `stats_total`, `stats_by_day`, `active_users` (см. Swagger)
 
@@ -69,4 +91,11 @@ Swagger-документация: `http://localhost:8000/docs`
 
 ```bash
 pytest
+```
+
+## Линтинг и форматирование
+
+```bash
+ruff check .
+ruff format .
 ```

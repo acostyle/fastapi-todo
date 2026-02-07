@@ -5,8 +5,6 @@ from src.tasks.constants import TASK_TITLE_MAX_LENGTH
 
 
 class UpdateTaskRequest(BaseSchema):
-    """Схема запроса для обновления задачи."""
-
     title: str | None = Field(
         default=None,
         max_length=TASK_TITLE_MAX_LENGTH,

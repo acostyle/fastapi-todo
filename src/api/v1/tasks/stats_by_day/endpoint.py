@@ -13,20 +13,8 @@ async def get_tasks_by_day(
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(get_current_user_id),
 ) -> list[TasksByDayResponse]:
-    """
-    Получить группировку задач по дням создания.
-
-    Args:
-        service: Сервис для работы с задачами
-        user_id: ID текущего пользователя из JWT токена
-
-    Returns:
-        Список с количеством задач по датам создания
-
-    Raises:
-        HTTPException 401: Если токен невалидный или отсутствует
-    """
-    return await service.get_tasks_by_day(user_id=user_id)
+    tasks_by_day = await service.get_tasks_by_day(user_id=user_id)
+    return [TasksByDayResponse.model_validate(item) for item in tasks_by_day]
 
 
 ENDPOINT_CONFIG = {

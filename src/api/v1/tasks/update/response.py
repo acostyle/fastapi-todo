@@ -7,8 +7,6 @@ from src.common.schemas import BaseResponseSchema
 
 
 class UpdateTaskResponse(BaseResponseSchema):
-    """Схема ответа при обновлении задачи."""
-
     id: UUID = Field(description="Уникальный идентификатор задачи")
     title: str = Field(description="Название задачи")
     description: str | None = Field(default=None, description="Описание задачи")

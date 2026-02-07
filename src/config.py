@@ -49,6 +49,11 @@ class AppSettings(BaseModel):
     environment: Literal["development", "production", "testing"] = "development"
 
 
+class RedisSettings(BaseModel):
+    url: str = "redis://localhost:6379/0"
+    task_list_ttl_seconds: int = 300
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -60,6 +65,7 @@ class Settings(BaseSettings):
 
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    redis: RedisSettings = Field(default_factory=RedisSettings)
     security: SecuritySettings
 
     @field_validator("security", mode="before")

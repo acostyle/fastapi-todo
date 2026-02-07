@@ -1,17 +1,14 @@
-from typing import cast
 from uuid import UUID
 
-from src.api.v1.users.register.request import RegisterRequest as UserCreateSchema
-from src.api.v1.users.get_by_id.response import GetUserResponse
-from src.api.v1.users.register.response import RegisterResponse
 from src.security import PasswordHasher, TokenManager
-from src.users.dto import UserCreateDTO
+from src.users.dto import UserCreateDTO, UserReadDTO
 from src.users.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
     InvalidPasswordError,
     InvalidCredentialsError,
 )
+from src.users.models import User
 from src.users.repository import UserRepository
 
 
@@ -28,9 +25,9 @@ class UserService:
     def _normalize_email(email: str) -> str:
         return email.strip().lower()
 
-    async def create_user(self, user_data: UserCreateSchema) -> RegisterResponse:
+    async def create_user(self, user_data: UserCreateDTO) -> UserReadDTO:
         normalized_username = self._normalize_username(user_data.username)
-        normalized_email = self._normalize_email(str(user_data.email))
+        normalized_email = self._normalize_email(user_data.email)
 
         password_errors = self.password_hasher.validate_password_strength(
             user_data.password
@@ -60,13 +57,13 @@ class UserService:
         )
 
         created_user = await self.repository.create(user_dto)
-        return RegisterResponse.model_validate(created_user)
+        return self._to_user_read_dto(created_user)
 
-    async def get_user(self, user_id: UUID) -> GetUserResponse:
+    async def get_user(self, user_id: UUID) -> UserReadDTO:
         user = await self.repository.get_by_id(user_id=user_id)
         if not user:
             raise UserNotFoundError(str(user_id))
-        return GetUserResponse.model_validate(user)
+        return self._to_user_read_dto(user)
 
     async def login(self, username: str, password: str) -> str:
         normalized_username = self._normalize_username(username)
@@ -75,9 +72,22 @@ class UserService:
         if not user:
             raise InvalidCredentialsError()
 
-        hashed_password = cast(str, user.hashed_password)
+        hashed_password = user.hashed_password
         if not self.password_hasher.verify_password(password, hashed_password):
             raise InvalidCredentialsError()
 
-        token = TokenManager.create_access_token(cast(UUID, user.id))
+        token = TokenManager.create_access_token(user.id)
         return token
+
+    @staticmethod
+    def _to_user_read_dto(user: User) -> UserReadDTO:
+        return UserReadDTO(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            birthdate=user.birthdate,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        )

@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
+from src.tasks.cache import TaskListCacheBackend, get_task_list_cache
 from src.tasks.repository import TaskRepository
 from src.tasks.services import TaskService
 
@@ -12,5 +13,6 @@ def get_task_repository(session: AsyncSession = Depends(get_session)) -> TaskRep
 
 def get_task_service(
     repository: TaskRepository = Depends(get_task_repository),
+    task_list_cache: TaskListCacheBackend = Depends(get_task_list_cache),
 ) -> TaskService:
-    return TaskService(repository)
+    return TaskService(repository, task_list_cache)

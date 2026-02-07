@@ -14,23 +14,8 @@ async def get_task_by_id(
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(get_current_user_id),
 ) -> TaskDetailResponse:
-    """
-    Получить задачу по ID.
-
-    Args:
-        task_id: UUID задачи
-        service: Сервис для работы с задачами
-        user_id: ID текущего пользователя из JWT токена
-
-    Returns:
-        Детальная информация о задаче
-
-    Raises:
-        HTTPException 401: Если токен невалидный
-        HTTPException 404: Если задача не найдена или не принадлежит пользователю
-    """
     task = await service.get_task_by_id(task_id=task_id, user_id=user_id)
-    return task
+    return TaskDetailResponse.model_validate(task)
 
 
 ENDPOINT_CONFIG = {

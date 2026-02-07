@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from uuid import UUID
 
@@ -52,3 +52,34 @@ class TaskFilterDTO:
             and self.created_from > self.created_to
         ):
             raise ValueError("created_from must be <= created_to")
+
+
+@dataclass
+class TaskReadDTO:
+    id: UUID
+    title: str
+    description: str | None
+    is_done: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass
+class TaskStatsDTO:
+    total: int
+    completed: int
+    pending: int
+    completion_percentage: float
+
+
+@dataclass
+class TasksByDayDTO:
+    date: date
+    count: int
+
+
+@dataclass
+class ActiveUserDTO:
+    user_id: UUID
+    username: str
+    pending_tasks_count: int

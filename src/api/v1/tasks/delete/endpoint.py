@@ -13,21 +13,6 @@ async def delete_task(
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(get_current_user_id),
 ) -> None:
-    """
-    Удалить задачу.
-
-    Args:
-        task_id: UUID задачи
-        service: Сервис для работы с задачами
-        user_id: ID текущего пользователя из JWT токена
-
-    Returns:
-        None (HTTP 204 No Content)
-
-    Raises:
-        HTTPException 401: Если токен невалидный
-        HTTPException 404: Если задача не найдена
-    """
     await service.delete_task(task_id=task_id, user_id=user_id)
 
 
