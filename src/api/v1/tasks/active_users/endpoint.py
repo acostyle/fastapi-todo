@@ -23,9 +23,6 @@ ENDPOINT_CONFIG = {
     "summary": "Топ активных пользователей",
     "description": "Возвращает топ пользователей по количеству невыполненных задач",
     "responses": {
-        status.HTTP_401_UNAUTHORIZED: {
-            "description": "Неавторизован - невалидный или отсутствующий токен"
-        },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "description": "Внутренняя ошибка сервера"
         },

@@ -20,18 +20,18 @@ tasks_router.add_api_route(
 )
 
 tasks_router.add_api_route(
-    **get_by_id.ENDPOINT_CONFIG,
-    endpoint=get_by_id.get_task_by_id,
-)
-
-tasks_router.add_api_route(
     **create.ENDPOINT_CONFIG,
     endpoint=create.create_task,
 )
 
 tasks_router.add_api_route(
-    **update.ENDPOINT_CONFIG,
     endpoint=update.update_task,
+    **(update.ENDPOINT_CONFIG | {"methods": ["PUT"], "name": "Update task (PUT)"}),
+)
+
+tasks_router.add_api_route(
+    endpoint=update.update_task,
+    **(update.ENDPOINT_CONFIG | {"methods": ["PATCH"], "name": "Update task (PATCH)"}),
 )
 
 tasks_router.add_api_route(
@@ -52,4 +52,9 @@ tasks_router.add_api_route(
 tasks_router.add_api_route(
     **active_users.ENDPOINT_CONFIG,
     endpoint=active_users.get_active_users,
+)
+
+tasks_router.add_api_route(
+    **get_by_id.ENDPOINT_CONFIG,
+    endpoint=get_by_id.get_task_by_id,
 )
