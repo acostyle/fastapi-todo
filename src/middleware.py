@@ -5,6 +5,7 @@ from collections.abc import Callable
 from uuid import uuid4
 
 from fastapi import Request, Response
+from starlette import status
 from starlette.responses import JSONResponse
 
 MAX_LOG_BYTES = 4_000
@@ -94,7 +95,7 @@ async def block_suspicious_user_agents(
     user_agent = request.headers.get("user-agent")
     if user_agent and _is_suspicious_user_agent(user_agent):
         return JSONResponse(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "User-Agent is not allowed"},
         )
 

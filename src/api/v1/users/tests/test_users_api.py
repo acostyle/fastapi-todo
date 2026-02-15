@@ -58,3 +58,14 @@ def test_login_user_invalid_credentials(client):
     assert login_response.status_code == 401
     data = login_response.json()
     assert data["error"] == "InvalidCredentialsError"
+
+
+def test_register_user_future_birthdate_validation(client):
+    payload = _make_user_payload()
+    payload["birthdate"] = "2999-01-01"
+
+    response = client.post("/api/v1/users/register", json=payload)
+
+    assert response.status_code == 422
+    data = response.json()
+    assert any(item["loc"][-1] == "birthdate" for item in data["detail"])

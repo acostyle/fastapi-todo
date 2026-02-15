@@ -41,18 +41,6 @@ class TaskFilterDTO:
     limit: int = 10
     offset: int = 0
 
-    def __post_init__(self):
-        if self.limit < 1 or self.limit > 100:
-            raise ValueError("limit must be between 1 and 100")
-        if self.offset < 0:
-            raise ValueError("offset must be >= 0")
-        if (
-            self.created_from
-            and self.created_to
-            and self.created_from > self.created_to
-        ):
-            raise ValueError("created_from must be <= created_to")
-
 
 @dataclass
 class TaskReadDTO:

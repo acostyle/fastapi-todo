@@ -13,7 +13,7 @@ async def login_user(
 ) -> LoginResponse:
     token = await service.login(
         username=credentials.username,
-        password=credentials.password,
+        password=credentials.password.get_secret_value(),
     )
     return LoginResponse(access_token=token, token_type="bearer")
 

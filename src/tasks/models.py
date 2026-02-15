@@ -23,5 +23,7 @@ class Task(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text(), nullable=True)
     is_done: Mapped[bool] = mapped_column(default=False)
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))  # on_delete?
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
     owner: Mapped["User"] = relationship(back_populates="tasks")

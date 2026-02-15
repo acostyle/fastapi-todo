@@ -34,6 +34,7 @@ class TaskService:
         return self._to_task_read_dto(task)
 
     async def get_all_tasks(self, search_params: TaskFilterDTO) -> list[TaskReadDTO]:
+        self._validate_filters(search_params)
         cached_tasks = await self.task_list_cache.get_tasks(
             user_id=search_params.user_id, search_params=search_params
         )
@@ -53,13 +54,7 @@ class TaskService:
         self, task_id: UUID, task_data: TaskUpdateDTO, user_id: UUID
     ) -> TaskReadDTO:
         task = await self._get_task_or_raise(task_id=task_id, user_id=user_id)
-
-        if task_data.title is not ...:
-            task.title = task_data.title
-        if task_data.description is not ...:
-            task.description = task_data.description
-        if task_data.is_done is not ...:
-            task.is_done = task_data.is_done
+        self._apply_task_updates(task=task, task_data=task_data)
 
         updated_task = await self.repository.save(task)
         await self.task_list_cache.invalidate_user(user_id)
@@ -109,6 +104,28 @@ class TaskService:
             )
             for item in active_users
         ]
+
+    @staticmethod
+    def _apply_task_updates(task: Task, task_data: TaskUpdateDTO) -> None:
+        # Обновляем только те поля, которые реально пришли в PATCH/PUT:
+        # значение `...` означает "поле не передано", его не трогаем.
+        for field_name in ("title", "description", "is_done"):
+            field_value = getattr(task_data, field_name)
+            if field_value is not ...:
+                setattr(task, field_name, field_value)
+
+    @staticmethod
+    def _validate_filters(search_params: TaskFilterDTO) -> None:
+        if not 1 <= search_params.limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if search_params.offset < 0:
+            raise ValueError("offset must be >= 0")
+        if (
+            search_params.created_from
+            and search_params.created_to
+            and search_params.created_from > search_params.created_to
+        ):
+            raise ValueError("created_from must be <= created_to")
 
     @staticmethod
     def _to_task_read_dto(task: Task) -> TaskReadDTO:

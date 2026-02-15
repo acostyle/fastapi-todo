@@ -13,6 +13,7 @@ class UpdateTaskRequest(BaseSchema):
     )
     description: str | None = Field(
         default=None,
+        max_length=TASK_TITLE_MAX_LENGTH,
         description="Описание задачи (опционально, можно установить null для очистки)",
         examples=["Купить свежий хлеб в пекарне"],
     )

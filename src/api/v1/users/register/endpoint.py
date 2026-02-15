@@ -15,7 +15,7 @@ async def register_user(
     user_dto = UserCreateDTO(
         username=user_data.username,
         email=str(user_data.email),
-        password=user_data.password,
+        password=user_data.password.get_secret_value(),
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         birthdate=user_data.birthdate,
